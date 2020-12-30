@@ -1,0 +1,60 @@
+# docker-compose.yaml
+version: '3'
+
+services:
+  app:
+    restart: always
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: rolliver_database_app
+    tty: true
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: pgsql://rolliver_user:1234@rolliver_database:5432/rolliver_db?serverVersion=13&charset=utf8
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+
+  webserver:
+    image: nginx:stable
+    container_name: rolliver_database_webserver
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+    volumes:
+      - ./:/var/www
+      - ./docker/app.conf:/etc/nginx/conf.d/default.conf
+    links:
+      - app
+
+  db:
+    image: postgres:11.5-alpine
+    container_name: rolliver_database
+    restart: always
+    environment:
+      - POSTGRES_DB=rolliver_db
+      - POSTGRES_USER=rolliver_user
+      - POSTGRES_PASSWORD=1234
+    ports:
+      - 8632:5432
+
+  dbtest:
+    image: postgres:11.5-alpine
+    container_name: rolliver_database_test
+    restart: always
+    volumes:
+      - db_data_test:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: testsecret
+      POSTGRES_USER: testuser
+      POSTGRES_DB: testdb
+    ports:
+      - "54321:5432"
+
+volumes:
+  db_data:
+  db_data_test:
